@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -5,6 +6,7 @@ public class PlayerController : MonoBehaviour
 {
     [SerializeField] private Transform playerTrans;
     [SerializeField] private float speed;
+    [SerializeField] private LayerMask hazardLayer;
 
     void Start()
     {
@@ -23,5 +25,18 @@ public class PlayerController : MonoBehaviour
         if (keyboard.aKey.wasPressedThisFrame) movement.x -= 1;
         if (keyboard.dKey.wasPressedThisFrame) movement.x += 1;
         playerTrans.position += movement;
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if ((hazardLayer.value & (1 << other.gameObject.layer)) != 0)
+        {
+            GameOver();
+        }
+    }
+
+    private void GameOver()
+    {
+        Debug.Log("Player is hit gmae over.");
     }
 }
