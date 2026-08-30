@@ -27,9 +27,9 @@ public class PlayerController : MonoBehaviour
         playerTrans.position += movement;
     }
 
-    private void OnTriggerEnter(Collider other)
+    private void OnCollisionEnter(Collision collision)
     {
-        if ((hazardLayer.value & (1 << other.gameObject.layer)) != 0)
+        if ((hazardLayer.value & (1 << collision.gameObject.layer)) != 0)
         {
             GameOver();
         }
@@ -37,6 +37,7 @@ public class PlayerController : MonoBehaviour
 
     private void GameOver()
     {
-        Debug.Log("Player is hit gmae over.");
+        Destroy(this);
+        Debug.Log("Player got hit, game over.");
     }
 }
