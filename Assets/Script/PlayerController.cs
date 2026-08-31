@@ -15,6 +15,9 @@ public class PlayerController : MonoBehaviour
     [SerializeField, Min(0.1f)] private float platformProbeHeight = 1f;
     [SerializeField, Min(0.1f)] private float platformProbeDistance = 3f;
 
+    [SerializeField] private float forwardBackProbeRadius = 0.3f;
+    [SerializeField] private float sideProbeRadius = 0.1f;
+
     private Rigidbody playerRigidbody;
     private MovingPlatform currentPlatform;
     private bool isGameOver;
@@ -49,8 +52,8 @@ public class PlayerController : MonoBehaviour
         if (isGameOver || gridMap == null || !gridMap.IsReady) return;
 
         bool wasOnPlatform = currentPlatform != null;
-
-        if (TryGetPlatformAt(playerTrans.position, out MovingPlatform platform))
+        
+        if (TryGetPlatformAt(playerTrans.position, platformProbeRadius, out MovingPlatform platform))
         {
             currentPlatform = platform;
             MoveWithCurrentPlatform();
@@ -86,16 +89,11 @@ public class PlayerController : MonoBehaviour
         Vector2Int currentGrid = gridMap.WorldToGrid(playerTrans.position);
         Vector2Int targetGrid = currentGrid + direction * gridStep;
 
-        if (!gridMap.TryGetTileType(targetGrid, out TileType tileType))
-        {
-            return;
-        }
+        if (!gridMap.TryGetTileType(targetGrid, out TileType tileType)) return;
 
-        Vector3 targetWorld = gridMap.GridToWorld(
-            targetGrid,
-            playerTrans.position.y
-        );
+        Vector3 targetWorld = gridMap.GridToWorld(targetGrid, playerTrans.position.y);
 
+        float probeRadius = direction.y != 0 ? forwardBackProbeRadius : sideProbeRadius;
         switch (tileType)
         {
             case TileType.Walkable:
@@ -107,21 +105,31 @@ public class PlayerController : MonoBehaviour
                 break;
 
             case TileType.Hazard:
-                MoveToHazardTile(targetWorld);
+                MoveToHazardTile(targetWorld, probeRadius);
                 break;
         }
     }
 
-    private void MoveToHazardTile(Vector3 targetWorld)
+    private void MoveToHazardTile(Vector3 targetWorld, float probeRadius)
     {
         MovePlayerTo(targetWorld);
 
-        if (TryGetPlatformAt(targetWorld, out MovingPlatform platform))
+        if (TryGetPlatformAt(targetWorld, probeRadius, out MovingPlatform platform))
         {
+            Vector3 landingPosition = targetWorld;
+
+            // X/Z 对齐移动平台中心
+            landingPosition.x = platform.transform.position.x;
+            landingPosition.z = platform.transform.position.z;
+
+            // Y 保留 Player 当前高度
+            landingPosition.y = playerTrans.position.y;
+
+            MovePlayerTo(landingPosition);
             currentPlatform = platform;
             return;
         }
-
+        MovePlayerTo(targetWorld);
         GameOver("Player fell into the water.");
     }
 
@@ -151,14 +159,13 @@ public class PlayerController : MonoBehaviour
         }
     }
 
-    private bool TryGetPlatformAt(
-        Vector3 worldPosition,
-        out MovingPlatform platform)
+    private bool TryGetPlatformAt(Vector3 worldPosition, float probeRadius, out MovingPlatform platform)
     {
         Vector3 origin = worldPosition + Vector3.up * platformProbeHeight;
+
         RaycastHit[] hits = Physics.SphereCastAll(
             origin,
-            platformProbeRadius,
+            probeRadius,
             Vector3.down,
             platformProbeDistance,
             Physics.AllLayers,
@@ -168,7 +175,6 @@ public class PlayerController : MonoBehaviour
         foreach (RaycastHit hit in hits)
         {
             platform = hit.collider.GetComponentInParent<MovingPlatform>();
-
             if (platform != null)
             {
                 return true;
@@ -212,7 +218,12 @@ public class PlayerController : MonoBehaviour
         if (isGameOver) return;
 
         isGameOver = true;
-        Destroy(this);
+        //Destroy(this);
         Debug.Log($"{reason} Game over.");
+    }
+
+    public bool IsGameOver()
+    {
+        return isGameOver;
     }
 }

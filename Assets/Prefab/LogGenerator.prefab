@@ -46,8 +46,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::BlockGenerator
   blockPrefab: {fileID: 4617429221864594344, guid: a9e32f5d270c56f4eae3bee4f1e61832, type: 3}
-  interval: 3
-  timer: 0
+  startOffset: 0
+  repeats: 3
+  repeatInterval: 0.25
+  interval: 1.5
 --- !u!1 &1933646169669368599
 GameObject:
   m_ObjectHideFlags: 0

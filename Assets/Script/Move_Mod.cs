@@ -19,6 +19,11 @@ public class MoveModule : MonoBehaviour
         direction = newDirection.normalized;
     }
 
+    public void SetSpeed(float newSpeed)
+    {
+        speed = Mathf.Max(0f, newSpeed);
+    }
+
     // Update is called once per frame
     void FixedUpdate()
     {

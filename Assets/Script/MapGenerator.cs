@@ -124,6 +124,9 @@ public class MapGenerator : MonoBehaviour
         if (blockGenerator != null)
         {
             blockGenerator.SetSpawnDirection(moveDirection);
+            blockGenerator.SetStartOffset(UnityEngine.Random.Range(0f, 2f));
+            blockGenerator.SetBlockSpeed(UnityEngine.Random.Range(2f, 7f));
+            blockGenerator.SetRepeat(UnityEngine.Random.Range(2, 5));
         }
         else
         {
