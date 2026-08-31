@@ -6,6 +6,21 @@ public class BlockGenerator : MonoBehaviour
     public float interval;
     public float timer;
 
+    private bool shouldOverrideDirection;
+    private Vector3 instanceDirection;
+
+    public void SetSpawnDirection(Vector3 direction)
+    {
+        if (direction.sqrMagnitude <= 0f)
+        {
+            Debug.LogWarning("Spawn direction cannot be zero.", this);
+            return;
+        }
+
+        instanceDirection = direction.normalized;
+        shouldOverrideDirection = true;
+    }
+
     void Start()
     {
         timer = interval;
@@ -29,6 +44,26 @@ public class BlockGenerator : MonoBehaviour
 
     void generate()
     {
-        Instantiate(blockPrefab, this.transform.position, Quaternion.identity, this.transform);
+        GameObject instance = Instantiate(
+            blockPrefab,
+            transform.position,
+            Quaternion.identity
+        );
+
+        if (!shouldOverrideDirection) return;
+
+        MoveModule moveModule = instance.GetComponent<MoveModule>();
+
+        if (moveModule != null)
+        {
+            moveModule.SetDirection(instanceDirection);
+        }
+        else
+        {
+            Debug.LogWarning(
+                $"{blockPrefab.name} does not have a MoveModule component.",
+                instance
+            );
+        }
     }
 }

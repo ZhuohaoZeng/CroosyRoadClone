@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using UnityEngine;
 
 public enum RowType
@@ -9,6 +8,7 @@ public enum RowType
     River
 }
 
+[RequireComponent(typeof(GridMap))]
 public class MapGenerator : MonoBehaviour
 {
     public int mapWidth = 11;
@@ -18,17 +18,37 @@ public class MapGenerator : MonoBehaviour
     public GameObject waterPrefab;
     public GameObject treePrefab;
 
-    private Dictionary<Vector2Int, Tile> tileMap;
+    [Header("River Moving Blocks")]
+    [SerializeField] private GameObject[] riverGeneratorPrefabs;
+    [SerializeField] private float generatorPadding = 2f;
+
+    [Header("Map Data")]
+    [SerializeField] private GridMap gridMap;
+
+    private void Awake()
+    {
+        if (gridMap == null)
+        {
+            gridMap = GetComponent<GridMap>();
+        }
+
+        if (gridMap == null)
+        {
+            gridMap = gameObject.AddComponent<GridMap>();
+        }
+    }
 
     void Start()
     {
-        tileMap = new Dictionary<Vector2Int, Tile>();
+        gridMap.Clear();
         GenerateMap();
+        gridMap.MarkReady();
     }
 
     private void GenerateMap()
     {
-        for (int z = 0; z < mapLength; z++)
+        GenerateRow(0, RowType.Grass);
+        for (int z = 1; z < mapLength; z++)
         {
             RowType rowType = GetRandomRowType();
 
@@ -55,26 +75,64 @@ public class MapGenerator : MonoBehaviour
     }
 
     void GenerateRiverRow(int z)
-{
-    int halfWidth = mapWidth / 2;
-
-    for (int x = -halfWidth; x <= halfWidth; x++)
     {
-        Vector3 pos = new Vector3(x, 0, z);
+        int halfWidth = mapWidth / 2;
 
-        GameObject obj = Instantiate(
-            waterPrefab,
-            pos,
+        for (int x = -halfWidth; x <= halfWidth; x++)
+        {
+            Vector3 pos = new Vector3(x, 0, z);
+
+            GameObject obj = Instantiate(
+                waterPrefab,
+                pos,
+                Quaternion.identity
+            );
+
+            Tile tile = obj.GetComponent<Tile>();
+            tile.tileType = TileType.Hazard;
+
+            gridMap.RegisterTile(new Vector2Int(x, z), tile);
+        }
+
+        GenerateRiverMovingBlocks(z, halfWidth);
+    }
+
+    private void GenerateRiverMovingBlocks(int z, int halfWidth)
+    {
+        if (riverGeneratorPrefabs == null || riverGeneratorPrefabs.Length == 0)
+        {
+            Debug.LogWarning("River Generator Prefab 没有设置。");
+            return;
+        }
+
+        int prefabIndex = UnityEngine.Random.Range(0, riverGeneratorPrefabs.Length);
+        GameObject generatorPrefab = riverGeneratorPrefabs[prefabIndex];
+
+        bool spawnFromLeft = UnityEngine.Random.value < 0.5f;
+        Vector3 moveDirection = spawnFromLeft ? Vector3.right : Vector3.left;
+        float spawnX = spawnFromLeft ? -halfWidth - generatorPadding : halfWidth + generatorPadding;
+        Vector3 spawnPosition = new Vector3(spawnX, 0f, z);
+
+        GameObject generatorInstance = Instantiate(
+            generatorPrefab,
+            spawnPosition,
             Quaternion.identity
         );
 
-        Tile tile = obj.GetComponent<Tile>();
+        BlockGenerator blockGenerator = generatorInstance.GetComponent<BlockGenerator>();
 
-        tile.tileType = TileType.Hazard;
-
-        tileMap[new Vector2Int(x, z)] = tile;
+        if (blockGenerator != null)
+        {
+            blockGenerator.SetSpawnDirection(moveDirection);
+        }
+        else
+        {
+            Debug.LogWarning(
+                $"{generatorPrefab.name} does not have a BlockGenerator component.",
+                generatorInstance
+            );
+        }
     }
-}
 
     private void GenerateRoadRow(int z)
     {
@@ -112,7 +170,7 @@ public class MapGenerator : MonoBehaviour
                 tile.tileType = TileType.Walkable;
             }
 
-            tileMap[new Vector2Int(x, z)] = tile;
+            gridMap.RegisterTile(new Vector2Int(x, z), tile);
         }
 
     }
@@ -128,26 +186,5 @@ public class MapGenerator : MonoBehaviour
         //     return RowType.Road;
 
         return RowType.River;
-    }
-
-
-//Below are check grid Map logics
-    void tryMoveTo(Vector2Int pos)
-    {
-        Tile nextPos = tileMap[pos];
-        switch (nextPos.tileType)
-        {
-            case TileType.Walkable:
-                break;
-            case TileType.Blocked:
-                break;
-            case TileType.Hazard:
-                break;
-        }
-        
-    }
-    bool isWalkable(Vector2Int pos)
-    {
-        return tileMap[pos].tileType == TileType.Walkable;
     }
 }
